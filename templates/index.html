@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Taxi Scheduler Pro</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50 p-10 font-sans text-gray-800">
+    <div class="max-w-4xl mx-auto bg-white p-8 rounded-xl shadow-lg border border-gray-100">
+        <h1 class="text-3xl font-bold mb-2 text-indigo-600">Optimizador de Flotas</h1>
+        <p class="text-gray-500 mb-6">Genera el cuadrante perfecto respetando los descansos.</p>
+        
+        <div class="mb-6">
+            <label class="block text-sm font-semibold mb-2">Conductores Disponibles (separados por coma)</label>
+            <input type="text" id="conductoresInput" value="Alberto, Bruno, Carlos, Daniel" 
+                   class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+        </div>
+
+        <button onclick="generarCuadrante()" 
+                class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded-lg transition-colors">
+            Generar Cuadrante Óptimo
+        </button>
+
+        <div id="mensajeError" class="mt-4 text-red-500 font-semibold hidden"></div>
+
+        <div id="resultadoContainer" class="mt-8 hidden">
+            <h2 class="text-xl font-bold mb-4 border-b pb-2">Cuadrante Semanal</h2>
+            <div id="tablaCuadrante" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <!-- Aquí inyectaremos los resultados -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        async function generarCuadrante() {
+            const input = document.getElementById('conductoresInput').value;
+            const conductores = input.split(',').map(c => c.trim()).filter(c => c !== "");
+            
+            const btn = document.querySelector('button');
+            btn.innerText = "Calculando...";
+            document.getElementById('mensajeError').classList.add('hidden');
+            document.getElementById('resultadoContainer').classList.add('hidden');
+
+            try {
+                const response = await fetch('/calcular', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ conductores: conductores })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || 'Error desconocido');
+                }
+
+                mostrarCuadrante(data.cuadrante);
+            } catch (error) {
+                document.getElementById('mensajeError').innerText = error.message;
+                document.getElementById('mensajeError').classList.remove('hidden');
+            } finally {
+                btn.innerText = "Generar Cuadrante Óptimo";
+            }
+        }
+
+        function mostrarCuadrante(cuadrante) {
+            const contenedor = document.getElementById('tablaCuadrante');
+            contenedor.innerHTML = '';
+
+            for (const [dia, turnos] of Object.entries(cuadrante)) {
+                const diaCard = `
+                    <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                        <h3 class="font-bold text-lg text-indigo-600 mb-2">${dia}</h3>
+                        <p><span class="font-semibold">Mañana:</span> ${turnos['Mañana']}</p>
+                        <p><span class="font-semibold">Noche:</span> ${turnos['Noche']}</p>
+                    </div>
+                `;
+                contenedor.innerHTML += diaCard;
+            }
+            document.getElementById('resultadoContainer').classList.remove('hidden');
+        }
+    </script>
+</body>
+</html>
